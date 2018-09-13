@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
+    <link href='https://fonts.googleapis.com/css?family=Sofia' rel='stylesheet'>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link href="css/weather.css" rel="stylesheet" />    
+    <link href="css/weather-icons-wind.min.css" rel="stylesheet" />
+    <link href="css/weather-icons.min.css" rel="stylesheet" />
+    <meta charset="UTF-8">
+    <link href='https://fonts.googleapis.com/css?family=Aguafina Script' rel='stylesheet'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+    <script src="https://unpkg.com/vue-chartjs/dist/vue-chartjs.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <title>Home</title>
+</head>
+
+<body>
+    <div class="row">
+        <div id="vue-app">
+            <div v-if="loading">
+                <transition name="modal">
+                    <div class="modal-mask">
+                        <div class="modal-wrapper">
+                            <div class="modal-container">
+
+
+                                <div class="modal-body">
+                                    <slot name="body">
+                                        <img src="loader.gif">
+                                    </slot>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </transition>
+            </div>
+            <header>
+<h1>Weather For U</h1>
+            </header>
+
+            <div class="search col-lg-8 col-lg-offset-2" v-if="loading==false"> <input class="col-lg-8 col-lg-offset-2" type="text" class="input" v-model.lazy="search" v-on:keyup.enter="fivedaydata()" placeholder="Search city..like this london,uk i am lazy dont bother me fixin staff" /><button class="search" v-on:click="fivedaydata()">Lets search it</button></div>
+            
+                          <div class="buttons col-lg-10 col-lg-offset-1" v-if="buttons">
+               <button style="font-size:24px" v-if="fivey" v-on:click="fivey=!fivey"><i class="fa fa-hand-o-up"></i></button>
+                <button style="font-size:24px" v-if="fivey==false" v-on:click="fivey=!fivey"><i class="fa fa-hand-o-down"> </i></button>
+                <h3 v-if="fivey">Next Five Day For {{search}}</h3></div>
+            <div class="five col-lg-10 col-lg-offset-1" v-if="fivey">
+ 
+                
+
+                <table class="table table-hover table-dark">
+                    <thead>
+                        <tr>
+                            <th>Date-Hour</th>
+                            <th>Temp.(&#8451)</th>
+                            <th>Description</th>
+                            <th><i class="wi wi-strong-wind"></i>  (m/sec)</th>
+                            <th><i class="wi wi-humidity"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody v-for="(list,index) in fiveday.list">
+                        <tr v-if="index%4==0">
+                            <td>{{date(list.dt)}}</td>
+                            <td>{{temp(list.main.temp)}}&#8451</td>
+                            <td><img v-bind:src=urlbuilder(list.weather[0].icon) v-bind:alt="list.weather[0].description"></td>
+                            <td><i v-bind:class="classbuilder(list.wind.deg)"></i>{{list.wind.speed}}</td>
+                            <td>{{list.main.humidity}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </div>
+
+
+            <linechart class="col-lg-10 col-lg-offset-1" v-if="chart" :options="chartx" :beta="charty"></linechart>
+
+            <div class="closey col-lg-10 col-lg-offset-1" v-if="close">
+                <h3>Places Around U</h3>
+                <table class="table table-hover table-dark">
+                    <thead>
+                        <tr>
+                            <th>Place</th>
+                            <th>Temp.(&#8451)</th>
+                            <th>Description</th>
+                            <th><i class="wi wi-strong-wind"></i> (m/sec)</th>
+                            <th><i class="wi wi-humidity"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody v-for="(sth, index) in closecity.list">
+                        <tr>
+                            <td>{{sth.name}}</td>
+                            <td>{{temp(sth.main.temp)}}&#8451</td>
+                            <td><img v-bind:src=urlbuilder(sth.weather[0].icon) v-bind:alt="sth.weather[0].description"></td>
+                            <td><i v-bind:class="classbuilder(sth.wind.deg)"></i>{{sth.wind.speed}}</td>
+                            <td>{{sth.main.humidity}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="map col-lg-10 col-lg-offset-1" v-if=false><iframe width="100%" height="20%" id="gmap_canvas" v-bind:src="url" frameborder="0" scrolling="no" marginheight="0" marginwidth="0"></iframe></div>
+            <div class="border current_weateher col-lg-10 col-lg-offset-1" v-if="current"> Current Weather
+
+                <div class="sun col-lg-12 ">
+                    <p>Sunrise:{{date(currentw.sys.sunrise)}} Sunset:{{date(currentw.sys.sunset)}}<img v-bind:src=urlbuilder(currentw.weather[0].icon) v-bind:alt="currentw.weather[0].description"></p>
+                </div>
+                <div class="temp col-lg-12">
+                    <div class="temp_min_max col-lg-3 ">
+                        <p>Min. Temp:{{temp(currentw.main.temp_min)}} &#8451</p>
+                        <p>Max. Temp:{{temp(currentw.main.temp_max)}}&#8451</p>
+                    </div>
+                    <div class="current_temp col-lg-3 ">
+                        <h1>{{temp(currentw.main.temp)}}<span>&#8451</span></h1>
+                    </div>
+                    <div class="wind_hum col-lg-3">
+                        <p> <i class="wi wi-strong-wind"></i>{{currentw.wind.speed}}meter/sec<i v-bind:class="classbuilder(currentw.wind.deg)"></i></p>
+                        <p> <i class="wi wi-humidity"></i> {{currentw.main.humidity}}%</p>
+                    </div>
+                </div>
+            </div>
+             
+        </div>
+    </div>
+
+    <script src="weather.js" S></script>
+
+</body>
+
+</html>
